@@ -57,6 +57,8 @@ func NewResponseFromRequest(
 		HeaderName: "User-Agent",
 		Contents:   "GoWVP/1.0",
 	})
+	xgbVer := XGBVer("3.0")
+	res.AppendHeader(&xgbVer)
 
 	return res
 }
