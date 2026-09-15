@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 	"unicode"
 
@@ -12,12 +13,17 @@ import (
 	"github.com/gowvp/owl/internal/core/ipc"
 	"github.com/gowvp/owl/internal/core/sms"
 	wsnotify "github.com/gowvp/owl/internal/notify"
+	"github.com/gowvp/owl/pkg/gbs/m"
 	"github.com/gowvp/owl/pkg/gbs/sip"
 	"github.com/ixugo/goddd/pkg/conc"
 	"github.com/ixugo/goddd/pkg/orm"
 )
 
 const ignorePassword = "#"
+
+func isChannelOnline(status string) bool {
+	return transDeviceStatus(strings.ToUpper(strings.TrimSpace(status))) == m.DeviceStatusON
+}
 
 type GB28181API struct {
 	cfg  *conf.SIP
@@ -93,7 +99,7 @@ func NewGB28181API(cfg *conf.Bootstrap, store ipc.Adapter, sms *sms.NodeManager)
 				DeviceID:  s,
 				ChannelID: ch.ChannelID,
 				Name:      ch.Name,
-				IsOnline:  ch.Status == "OK" || ch.Status == "ON",
+				IsOnline:  isChannelOnline(ch.Status),
 				PTZ:       ptz,
 				Ext: ipc.DeviceExt{
 					Manufacturer: ch.Manufacturer,

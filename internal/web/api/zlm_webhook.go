@@ -270,16 +270,14 @@ func (w WebHookAPI) onStreamNotFound(c *gin.Context, in *onStreamNotFoundInput) 
 	ctx := c.Request.Context()
 	w.log.InfoContext(ctx, "webhook onStreamNotFound", "app", in.App, "stream", in.Stream, "schema", in.Schema, "mediaServerID", in.MediaServerID)
 
-	stream := in.StreamName
-	app := in.AppName
-	// 确保不是 lalmax 的流
-	if in.StreamName == "" {
-		stream = in.Stream
-		app = in.App
-		if !(in.Schema == "rtmp" || in.Schema == "rtsp") {
-			return newDefaultOutputOK(), nil
-		}
+	// Standard ZLM playback probes for HLS/WebRTC must not restart the GB28181
+	// session.  The RTSP probe issued by the play endpoint is the single start
+	// trigger; restarting on a later HLS miss tears down a healthy RTP session.
+	if !shouldStartPlayback(in) {
+		return newDefaultOutputOK(), nil
 	}
+
+	app, stream := resolveStreamNotFoundInput(in)
 
 	// 通过 app+stream 查询通道获取类型，支持自定义 app/stream
 	channelType := w.getChannelType(ctx, app, stream)
@@ -291,6 +289,17 @@ func (w WebHookAPI) onStreamNotFound(c *gin.Context, in *onStreamNotFoundInput) 
 	}
 
 	return newDefaultOutputOK(), nil
+}
+
+func shouldStartPlayback(in *onStreamNotFoundInput) bool {
+	return in.StreamName != "" || in.Schema == "rtmp" || in.Schema == "rtsp"
+}
+
+func resolveStreamNotFoundInput(in *onStreamNotFoundInput) (app, stream string) {
+	if in.StreamName != "" {
+		return in.AppName, in.StreamName
+	}
+	return in.App, in.Stream
 }
 
 // onRecordMP4 录制 mp4 完成后通知事件
