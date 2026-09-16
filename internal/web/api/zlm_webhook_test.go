@@ -64,3 +64,34 @@ func TestRelativeRecordingPath(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveStreamNotFoundInput(t *testing.T) {
+	app, stream := resolveStreamNotFoundInput(&onStreamNotFoundInput{
+		App:    "rtp",
+		Stream: "chdo18j",
+		Schema: "webrtc",
+	})
+	if app != "rtp" || stream != "chdo18j" {
+		t.Fatalf("standard ZLM input lost app/stream: got %q/%q", app, stream)
+	}
+}
+
+func TestShouldStartPlayback(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		streamName string
+		schema     string
+		want       bool
+	}{
+		{"hls does not restart standard stream", "", "hls", false},
+		{"webrtc does not restart standard stream", "", "rtc", false},
+		{"rtsp starts standard stream", "", "rtsp", true},
+		{"lalmax stream remains supported", "stream", "hls", true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := shouldStartPlayback(&onStreamNotFoundInput{StreamName: tt.streamName, Schema: tt.schema}); got != tt.want {
+				t.Fatalf("shouldStartPlayback() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
